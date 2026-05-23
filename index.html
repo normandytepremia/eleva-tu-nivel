@@ -597,34 +597,33 @@ function clienteTbl(vd){
 
 // Actualiza solo el contenido de las tablas abiertas sin reconstruir el DOM
 function refreshTablesOnly(){
-  // Actualizar encabezados de columna ref en tablas visibles
   const refLabel=REF==='900'?'900G':REF==='450'?'450G':'Total';
-  document.querySelectorAll('thead th').forEach(th=>{
-    if(th.textContent.match(/^Meta /)) th.textContent='Meta '+refLabel;
-    if(th.textContent.match(/^Venta /)) th.textContent='Venta '+refLabel;
-    if(th.textContent.match(/^Cumpl\. (900G|450G|Total)$/)) th.textContent='Cumpl. '+refLabel;
-  });
-  // Actualizar filas de cada tabla abierta
-  document.querySelectorAll('.tbl-wrap.open table tbody').forEach(tbody=>{
-    // Encontrar el vendedor dueño de esta tabla buscando el vrow padre
-    const tblWrap=tbody.closest('.tbl-wrap');
-    if(!tblWrap) return;
-    // Obtener el ID del tblWrap para buscar el vendedor en R
-    const tblId=tblWrap.id;
-    // Buscar vd en R que corresponda a este tblWrap
-    let foundVd=null;
-    Object.values(R).forEach(rd=>Object.values(rd.grupos).forEach(gd=>Object.values(gd.ven).forEach(vd=>{
-      if(!foundVd && tblWrap.innerHTML.includes(vd.cl[0]?.pdv||'__NOMATCH__')) foundVd=vd;
-    })));
-    if(!foundVd) return;
-    const rows=[...foundVd.cl].filter(c=>REF==='900'?c.m9>0:REF==='450'?c.m4>0:(c.m9+c.m4)>0)
+  // Solo actuar sobre tablas que tengan data-ven (las de clientes)
+  document.querySelectorAll('.tbl-wrap[data-ven]').forEach(tw=>{
+    const vn=tw.getAttribute('data-ven');
+    const rg=tw.getAttribute('data-rg');
+    const gr=tw.getAttribute('data-gr');
+    if(!vn||!rg||!gr) return;
+    // Actualizar encabezado
+    const thead=tw.querySelector('thead');
+    if(thead) thead.innerHTML=`<tr>
+      <th>Punto de Venta</th>
+      <th>Meta ${refLabel}</th><th>Venta ${refLabel}</th><th>Cumpl. ${refLabel}</th>
+      <th>Cumpl. Total</th>
+    </tr>`;
+    // Buscar datos del vendedor
+    const vd=R[rg]&&R[rg].grupos[gr]&&R[rg].grupos[gr].ven[vn];
+    if(!vd) return;
+    const rows=[...vd.cl].filter(c=>REF==='900'?c.m9>0:REF==='450'?c.m4>0:(c.m9+c.m4)>0)
       .map(c=>({...c,pt:pct(c.v9+c.v4,c.m9+c.m4)})).sort((a,b)=>a.pt-b.pt);
-    let html='';
+    const tbody=tw.querySelector('tbody');
+    if(!tbody) return;
+    let h='';
     rows.forEach(c=>{
       const r=refCols(c);
-      html+=`<tr><td>${c.pdv}</td><td>${r.m.toLocaleString()}</td><td>${r.v.toLocaleString()}</td><td>${bdg(r.p)}</td><td>${bdg(c.pt)}</td></tr>`;
+      h+=`<tr><td>${c.pdv}</td><td>${r.m.toLocaleString()}</td><td>${r.v.toLocaleString()}</td><td>${bdg(r.p)}</td><td>${bdg(c.pt)}</td></tr>`;
     });
-    tbody.innerHTML=html||'<tr><td colspan="5" style="color:#bbb;text-align:center;padding:14px">Sin clientes con meta asignada.</td></tr>';
+    tbody.innerHTML=h||'<tr><td colspan="5" style="color:#bbb;text-align:center;padding:14px">Sin clientes con meta asignada.</td></tr>';
   });
 }
 
@@ -666,7 +665,7 @@ function renderGrupos(){
       h+=`<div class="nivel-grupo"><div class="nivel-grupo-hd" onclick="tog('${gbId}','${gcId}')"><div style="flex:1;min-width:0"><div class="nivel-grupo-title">${gr}</div><div class="nivel-grupo-sub">${Object.keys(gd.ven).length} vendedores · ${vt2.toLocaleString()} / ${mt2.toLocaleString()} un.</div>${bar(pt)}</div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${bdg(pt)}<span class="chev" id="${gcId}">▼</span></div></div><div class="nivel-grupo-body" id="${gbId}">`;
       Object.entries(gd.ven).map(([vn,vd])=>{const mt3=vd.m9+vd.m4,vt3=vd.v9+vd.v4;return{vn,vd,pt:pct(vt3,mt3),mt3,vt3};}).sort((a,b)=>a.pt-b.pt).forEach(({vn,vd,pt,mt3,vt3})=>{
         const tId=uid();
-        h+=`<div class="vrow" onclick="tog('${tId}')"><div style="flex:1;min-width:0"><div class="vrow-name">${vn}</div><div class="vrow-sub">${vd.cl.length} clientes · ${vt3.toLocaleString()} / ${mt3.toLocaleString()} un.</div></div><div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${bdg(pt)}<span class="chev">▼</span></div></div><div class="tbl-wrap" id="${tId}">${clienteTbl(vd)}</div>`;
+        h+=`<div class="vrow" onclick="tog('${tId}')"><div style="flex:1;min-width:0"><div class="vrow-name">${vn}</div><div class="vrow-sub">${vd.cl.length} clientes · ${vt3.toLocaleString()} / ${mt3.toLocaleString()} un.</div></div><div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${bdg(pt)}<span class="chev">▼</span></div></div><div class="tbl-wrap" id="${tId}" data-ven="${vn}" data-rg="${rg}" data-gr="${gr}">${clienteTbl(vd)}</div>`;
       });
       h+=`</div></div>`;
     });
@@ -699,7 +698,7 @@ function renderVenTab(){
       if(!vens.length)return;
       applySortFn(vens.map(([vn,vd])=>{const mt=vd.m9+vd.m4,vt=vd.v9+vd.v4;return{vn,vd,pt:pct(vt,mt),mt,vt};}),SORT.ven,'mt').forEach(({vn,vd,pt,mt,vt})=>{
         const bId=uid(),cId=uid();
-        h+=`<div class="card"><div class="card-hd" onclick="tog('${bId}','${cId}')"><div style="flex:1;min-width:0"><div class="card-title">${vn}</div><div class="card-sub">${region} · ${gr} · ${vd.cl.length} clientes</div><div style="font-size:11px;color:#aaa;margin-top:3px">${vt.toLocaleString()} / ${mt.toLocaleString()} un.</div>${bar(pt)}</div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${bdg(pt)}<span class="chev" id="${cId}">▼</span></div></div><div class="card-body" id="${bId}"><div class="tbl-wrap open">${clienteTbl(vd)}</div></div></div>`;
+        h+=`<div class="card"><div class="card-hd" onclick="tog('${bId}','${cId}')"><div style="flex:1;min-width:0"><div class="card-title">${vn}</div><div class="card-sub">${region} · ${gr} · ${vd.cl.length} clientes</div><div style="font-size:11px;color:#aaa;margin-top:3px">${vt.toLocaleString()} / ${mt.toLocaleString()} un.</div>${bar(pt)}</div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${bdg(pt)}<span class="chev" id="${cId}">▼</span></div></div><div class="card-body" id="${bId}"><div class="tbl-wrap open" data-ven="${vn}" data-rg="${region}" data-gr="${gr}">${clienteTbl(vd)}</div></div></div>`;
       });
     });
   });
