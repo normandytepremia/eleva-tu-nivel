@@ -691,7 +691,17 @@ function renderGrupos(){
       h+=`<div class="nivel-grupo"><div class="nivel-grupo-hd" onclick="tog('${gbId}','${gcId}')"><div style="flex:1;min-width:0"><div class="nivel-grupo-title">${gr}</div><div class="nivel-grupo-sub">${Object.keys(gd.ven).length} vendedores · ${vt2.toLocaleString()} / ${mt2.toLocaleString()} un.</div>${bar(pt)}</div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${bdg(pt)}<span class="chev" id="${gcId}">▼</span></div></div><div class="nivel-grupo-body" id="${gbId}">`;
       Object.entries(gd.ven).map(([vn,vd])=>{const mt3=vd.m9+vd.m4,vt3=vd.v9+vd.v4;return{vn,vd,pt:pct(vt3,mt3),mt3,vt3};}).sort((a,b)=>a.pt-b.pt).forEach(({vn,vd,pt,mt3,vt3})=>{
         const tId=uid();
-        h+=`<div class="vrow" onclick="tog('${tId}')"><div style="flex:1;min-width:0"><div class="vrow-name">${vn}</div><div class="vrow-sub">${vd.cl.length} clientes · ${vt3.toLocaleString()} / ${mt3.toLocaleString()} un.</div></div><div style="display:flex;align-items:center;gap:4px;flex-shrink:0">${bdg(pt)}<span class="chev">▼</span></div></div><div class="tbl-wrap" id="${tId}" data-ven="${vn}" data-rg="${rg}" data-gr="${gr}">${clienteTbl(vd)}</div>`;
+        const pt9b=pct(vd.v9,vd.m9),pt4b=pct(vd.v4,vd.m4);
+            const curPtB=REF==='900'?pt9b:REF==='450'?pt4b:pt;
+            const curVB=REF==='900'?vd.v9:REF==='450'?vd.v4:vt3;
+            const curMB=REF==='900'?vd.m9:REF==='450'?vd.m4:mt3;
+            h+=`<div class="vrow" onclick="tog('${tId}')"
+              data-pt-total="${pt}" data-pt-900="${pt9b}" data-pt-450="${pt4b}"
+              data-v-total="${vt3}" data-m-total="${mt3}"
+              data-v-900="${vd.v9}" data-m-900="${vd.m9}"
+              data-v-450="${vd.v4}" data-m-450="${vd.m4}">
+              <div style="flex:1;min-width:0"><div class="vrow-name">${vn}</div><div class="vrow-sub vrow-sub-dyn">${vd.cl.length} clientes · ${curVB.toLocaleString()} / ${curMB.toLocaleString()} un.</div></div>
+              <div style="display:flex;align-items:center;gap:4px;flex-shrink:0"><span class="vrow-bdg">${bdg(curPtB)}</span><span class="chev">▼</span></div></div><div class="tbl-wrap" id="${tId}" data-ven="${vn}" data-rg="${rg}" data-gr="${gr}">${clienteTbl(vd)}</div>`;
       });
       h+=`</div></div>`;
     });
