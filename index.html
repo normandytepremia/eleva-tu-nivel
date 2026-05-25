@@ -598,6 +598,32 @@ function clienteTbl(vd){
 // Actualiza solo el contenido de las tablas abiertas sin reconstruir el DOM
 function refreshTablesOnly(){
   const refLabel=REF==='900'?'900G':REF==='450'?'450G':'Total';
+  const k=REF==='900'?'900':REF==='450'?'450':'total';
+
+  // Actualizar badges y unidades en cabeceras de tarjetas (tab vendedores)
+  document.querySelectorAll('.card-hd[data-pt-total]').forEach(hd=>{
+    const curPt=parseFloat(hd.getAttribute('data-pt-'+k))||0;
+    const curV=parseInt(hd.getAttribute('data-v-'+k))||0;
+    const curM=parseInt(hd.getAttribute('data-m-'+k))||0;
+    const bdgEl=hd.querySelector('.card-hd-bdg');
+    if(bdgEl) bdgEl.innerHTML=bdg(curPt);
+    const unEl=hd.querySelector('.card-hd-units');
+    if(unEl) unEl.textContent=curV.toLocaleString()+' / '+curM.toLocaleString()+' un.';
+    const progEl=hd.querySelector('.prog-fill');
+    if(progEl){progEl.className='prog-fill fill-'+clsD(curPt);progEl.style.width=Math.max(0,Math.min(curPt,100))+'%';}
+  });
+
+  // Actualizar badges y unidades en vrows (tab por región)
+  document.querySelectorAll('.vrow[data-pt-total]').forEach(vrow=>{
+    const curPt=parseFloat(vrow.getAttribute('data-pt-'+k))||0;
+    const curV=parseInt(vrow.getAttribute('data-v-'+k))||0;
+    const curM=parseInt(vrow.getAttribute('data-m-'+k))||0;
+    const bdgEl=vrow.querySelector('.vrow-bdg');
+    if(bdgEl) bdgEl.innerHTML=bdg(curPt);
+    const subEl=vrow.querySelector('.vrow-sub-dyn');
+    if(subEl){const parts=subEl.textContent.split(' clientes');subEl.textContent=parts[0]+' clientes · '+curV.toLocaleString()+' / '+curM.toLocaleString()+' un.';}
+  });
+
   // Solo actuar sobre tablas que tengan data-ven (las de clientes)
   document.querySelectorAll('.tbl-wrap[data-ven]').forEach(tw=>{
     const vn=tw.getAttribute('data-ven');
