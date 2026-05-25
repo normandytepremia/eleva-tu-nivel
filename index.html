@@ -496,7 +496,7 @@ function setRef(ref,el){
     const id=activeTab.id;
     if(id==='tab-nacional') renderNacional();
     else if(id==='tab-grupos') refreshTablesOnly();
-    else if(id==='tab-vendedores') refreshTablesOnly();
+    else if(id==='tab-vendedores') renderVenTab();
   }
   if(document.getElementById('ven-solo-wrap').style.display!=='none') renderVenSolo();
 }
@@ -732,7 +732,12 @@ function renderVenTab(){
       if(gf&&gr!==gf)return;
       const vens=Object.entries(gd.ven).filter(([vn,vd])=>!q||vn.toLowerCase().includes(q)||vd.cl.some(c=>c.pdv.toLowerCase().includes(q)));
       if(!vens.length)return;
-      applySortFn(vens.map(([vn,vd])=>{const mt=vd.m9+vd.m4,vt=vd.v9+vd.v4;return{vn,vd,pt:pct(vt,mt),mt,vt};}),SORT.ven,'mt').forEach(({vn,vd,pt,mt,vt})=>{
+      applySortFn(vens.map(([vn,vd])=>{
+        const mt=vd.m9+vd.m4, vt=vd.v9+vd.v4;
+        const ptRef=REF==='900'?pct(vd.v9,vd.m9):REF==='450'?pct(vd.v4,vd.m4):pct(vt,mt);
+        const mtRef=REF==='900'?vd.m9:REF==='450'?vd.m4:mt;
+        return{vn,vd,pt:ptRef,mt:mtRef,vt};
+      }),SORT.ven,'mt').forEach(({vn,vd,pt,mt,vt})=>{
         const bId=uid(),cId=uid();
         const pt9v=pct(vd.v9,vd.m9),pt4v=pct(vd.v4,vd.m4);
         const curPtV=REF==='900'?pt9v:REF==='450'?pt4v:pt;
