@@ -418,7 +418,7 @@ const CONFIG = {
     {rol:'VENDEDOR',    usuario:'BOGAS',   password:'5606',      filtro:'BOGAS'},
     {rol:'VENDEDOR',    usuario:'MGMAS',   password:'5617',      filtro:'MGMAS'},
     {rol:'VENDEDOR',    usuario:'BOGAS1',  password:'9438',      filtro:'BOGAS1'},
-    {rol:'VENDEDOR',    usuario:'SOAAS',   password:'9459',      filtro:'SOAAS'},
+    {rol:'VENDEDOR',    usuario:'SDAAS',   password:'9459',      filtro:'SDAAS'},
     {rol:'VENDEDOR',    usuario:'BOGAS2',  password:'5503',      filtro:'BOGAS2'},
     {rol:'VENDEDOR',    usuario:'BOGAS3',  password:'4385',      filtro:'BOGAS3'},
     {rol:'VENDEDOR',    usuario:'PERAS1',  password:'8529',      filtro:'PERAS1'},
@@ -570,14 +570,18 @@ function refCols(c){
 }
 
 function clienteTbl(vd){
-  const rows=[...vd.cl].filter(c=>{
-    if(REF==='900') return c.m9>0;
-    if(REF==='450') return c.m4>0;
-    return (c.m9+c.m4)>0;
-  }).map(c=>({...c,
-    pt:pct(c.v9+c.v4,c.m9+c.m4)
-  })).sort((a,b)=>a.pt-b.pt);
-  if(!rows.length)return '<div class="empty" style="padding:14px;font-size:11px">Sin clientes con meta asignada.</div>';
+  // Mostrar clientes con meta O con venta (clientes nuevos sin meta asignada)
+  // Ocultar solo los que no tienen ni meta ni venta
+  const rows=[...vd.cl]
+    .filter(c=>(c.m9+c.m4)>0 || (c.v9+c.v4)>0)
+    .map(c=>({...c, esNuevo:(c.m9+c.m4)===0, pt:pct(c.v9+c.v4,c.m9+c.m4)}))
+    .sort((a,b)=>{
+      // Clientes nuevos siempre al final
+      if(a.esNuevo && !b.esNuevo) return 1;
+      if(!a.esNuevo && b.esNuevo) return -1;
+      return a.pt-b.pt;
+    });
+  if(!rows.length)return '<div class="empty" style="padding:14px;font-size:11px">Sin clientes con actividad.</div>';
   const refLabel=REF==='900'?'900G':REF==='450'?'450G':'Total';
   let t=`<table><thead><tr>
     <th>Punto de Venta</th>
@@ -586,11 +590,17 @@ function clienteTbl(vd){
   </tr></thead><tbody>`;
   rows.forEach(c=>{
     const r=refCols(c);
-    t+=`<tr>
-      <td>${c.pdv}</td>
-      <td>${r.m.toLocaleString()}</td><td>${r.v.toLocaleString()}</td><td>${bdg(r.p)}</td>
-      <td>${bdg(c.pt)}</td>
-    </tr>`;
+    if(c.esNuevo){
+      t+=`<tr style="background:#eff6ff">
+        <td>${c.pdv} <span style="font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:1px 6px;border-radius:10px;margin-left:4px">🆕 Nuevo</span></td>
+        <td style="color:#94a3b8">Sin meta</td>
+        <td>${r.v.toLocaleString()}</td>
+        <td style="color:#94a3b8">—</td>
+        <td style="color:#94a3b8">—</td>
+      </tr>`;
+    } else {
+      t+=`<tr><td>${c.pdv}</td><td>${r.m.toLocaleString()}</td><td>${r.v.toLocaleString()}</td><td>${bdg(r.p)}</td><td>${bdg(c.pt)}</td></tr>`;
+    }
   });
   return t+'</tbody></table>';
 }
@@ -608,7 +618,17 @@ function refreshTablesOnly(){
     const bdgEl=hd.querySelector('.card-hd-bdg');
     if(bdgEl) bdgEl.innerHTML=bdg(curPt);
     const unEl=hd.querySelector('.card-hd-units');
-    if(unEl) unEl.textContent=curV.toLocaleString()+' / '+curM.toLocaleString()+' un.';
+    if(unEl){
+      // unEl has text + span.card-hd-nuevos — update only the text node
+      const textNode=[...unEl.childNodes].find(n=>n.nodeType===3);
+      if(textNode) textNode.textContent=curV.toLocaleString()+' / '+curM.toLocaleString()+' un.';
+      else unEl.firstChild.textContent=curV.toLocaleString()+' / '+curM.toLocaleString()+' un.';
+    }
+    const nuevosEl=hd.querySelector('.card-hd-nuevos');
+    if(nuevosEl){
+      const uN=parseInt(hd.getAttribute('data-nuevos-'+k))||0;
+      nuevosEl.innerHTML=uN>0?`<span style="font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:1px 7px;border-radius:10px;margin-left:6px">🆕 +${uN} un. nuevas</span>`:'';
+    }
     const progEl=hd.querySelector('.prog-fill');
     if(progEl){progEl.className='prog-fill fill-'+clsD(curPt);progEl.style.width=Math.max(0,Math.min(curPt,100))+'%';}
   });
@@ -743,15 +763,26 @@ function renderVenTab(){
         const curPtV=REF==='900'?pt9v:REF==='450'?pt4v:pt;
         const curVV=REF==='900'?vd.v9:REF==='450'?vd.v4:vt;
         const curMV=REF==='900'?vd.m9:REF==='450'?vd.m4:mt;
+        // Calcular unidades de clientes nuevos (sin meta)
+        const uNuevos=vd.cl.filter(c=>(c.m9+c.m4)===0).reduce((a,c)=>a+(c.v9+c.v4),0);
+        const uNuevosRef=REF==='900'?vd.cl.filter(c=>c.m9===0&&c.v9>0).reduce((a,c)=>a+c.v9,0)
+                        :REF==='450'?vd.cl.filter(c=>c.m4===0&&c.v4>0).reduce((a,c)=>a+c.v4,0)
+                        :uNuevos;
+        const tagNuevos=uNuevosRef>0
+          ? `<span style="font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:1px 7px;border-radius:10px;margin-left:6px">🆕 +${uNuevosRef} un. nuevas</span>`
+          : '';
         h+=`<div class="card"><div class="card-hd" onclick="tog('${bId}','${cId}')"
           data-pt-total="${pt}" data-pt-900="${pt9v}" data-pt-450="${pt4v}"
           data-v-total="${vt}" data-m-total="${mt}"
           data-v-900="${vd.v9}" data-m-900="${vd.m9}"
-          data-v-450="${vd.v4}" data-m-450="${vd.m4}">
+          data-v-450="${vd.v4}" data-m-450="${vd.m4}"
+          data-nuevos-total="${uNuevos}"
+          data-nuevos-900="${vd.cl.filter(c=>c.m9===0&&c.v9>0).reduce((a,c)=>a+c.v9,0)}"
+          data-nuevos-450="${vd.cl.filter(c=>c.m4===0&&c.v4>0).reduce((a,c)=>a+c.v4,0)}">
           <div style="flex:1;min-width:0">
             <div class="card-title">${vn}</div>
             <div class="card-sub">${region} · ${gr} · ${vd.cl.length} clientes</div>
-            <div class="card-hd-units" style="font-size:11px;color:#aaa;margin-top:3px">${curVV.toLocaleString()} / ${curMV.toLocaleString()} un.</div>
+            <div class="card-hd-units" style="font-size:11px;color:#aaa;margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:4px">${curVV.toLocaleString()} / ${curMV.toLocaleString()} un.<span class="card-hd-nuevos">${tagNuevos}</span></div>
             ${bar(curPtV)}
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
