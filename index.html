@@ -734,7 +734,26 @@ function renderVenTab(){
       if(!vens.length)return;
       applySortFn(vens.map(([vn,vd])=>{const mt=vd.m9+vd.m4,vt=vd.v9+vd.v4;return{vn,vd,pt:pct(vt,mt),mt,vt};}),SORT.ven,'mt').forEach(({vn,vd,pt,mt,vt})=>{
         const bId=uid(),cId=uid();
-        h+=`<div class="card"><div class="card-hd" onclick="tog('${bId}','${cId}')"><div style="flex:1;min-width:0"><div class="card-title">${vn}</div><div class="card-sub">${region} · ${gr} · ${vd.cl.length} clientes</div><div style="font-size:11px;color:#aaa;margin-top:3px">${vt.toLocaleString()} / ${mt.toLocaleString()} un.</div>${bar(pt)}</div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${bdg(pt)}<span class="chev" id="${cId}">▼</span></div></div><div class="card-body" id="${bId}"><div class="tbl-wrap open" data-ven="${vn}" data-rg="${region}" data-gr="${gr}">${clienteTbl(vd)}</div></div></div>`;
+        const pt9v=pct(vd.v9,vd.m9),pt4v=pct(vd.v4,vd.m4);
+        const curPtV=REF==='900'?pt9v:REF==='450'?pt4v:pt;
+        const curVV=REF==='900'?vd.v9:REF==='450'?vd.v4:vt;
+        const curMV=REF==='900'?vd.m9:REF==='450'?vd.m4:mt;
+        h+=`<div class="card"><div class="card-hd" onclick="tog('${bId}','${cId}')"
+          data-pt-total="${pt}" data-pt-900="${pt9v}" data-pt-450="${pt4v}"
+          data-v-total="${vt}" data-m-total="${mt}"
+          data-v-900="${vd.v9}" data-m-900="${vd.m9}"
+          data-v-450="${vd.v4}" data-m-450="${vd.m4}">
+          <div style="flex:1;min-width:0">
+            <div class="card-title">${vn}</div>
+            <div class="card-sub">${region} · ${gr} · ${vd.cl.length} clientes</div>
+            <div class="card-hd-units" style="font-size:11px;color:#aaa;margin-top:3px">${curVV.toLocaleString()} / ${curMV.toLocaleString()} un.</div>
+            ${bar(curPtV)}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <span class="card-hd-bdg">${bdg(curPtV)}</span>
+            <span class="chev" id="${cId}">▼</span>
+          </div>
+        </div><div class="card-body" id="${bId}"><div class="tbl-wrap open" data-ven="${vn}" data-rg="${region}" data-gr="${gr}">${clienteTbl(vd)}</div></div></div>`;
       });
     });
   });
