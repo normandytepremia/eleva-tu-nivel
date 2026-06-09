@@ -1569,7 +1569,7 @@ function calcDiasHabiles(fechaCorte){
   const m2=iso.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
   if(m1)iso=`${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
   else if(m2)iso=`2026-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
-  const inicio=new Date('2026-05-01T00:00:00'),fin=new Date(iso+'T00:00:00');
+  const inicio=new Date('2026-06-01T00:00:00'),fin=new Date(iso+'T00:00:00');
   if(isNaN(fin.getTime())||fin<inicio)return 0;
   let count=0;const d=new Date(inicio);
   while(d<=fin){const dow=d.getDay(),key=d.toISOString().slice(0,10);if(dow!==0&&!CONFIG.FESTIVOS.has(key))count++;d.setDate(d.getDate()+1);}
@@ -1588,6 +1588,11 @@ function buildAll(rows){
     R_ALL[rg].grupos[gr].ven[vn].cl.push({pdv,v9,v4,m9,m4});
     [[v9,'v9'],[v4,'v4'],[m9,'m9'],[m4,'m4']].forEach(([val,k])=>{R_ALL[rg].grupos[gr].ven[vn][k]+=val;R_ALL[rg].grupos[gr][k]+=val;R_ALL[rg][k]+=val;});
   });
+  if(!fecha){
+    // Sin datos en el CSV: usar ayer (día vencido = hoy aún no cierra)
+    const ayer=new Date();ayer.setDate(ayer.getDate()-1);
+    fecha=ayer.getDate().toString().padStart(2,'0')+'/'+String(ayer.getMonth()+1).padStart(2,'0')+'/'+ayer.getFullYear();
+  }
   if(fecha){
     DH_TRANS=Math.min(calcDiasHabiles(fecha),CONFIG.TOTAL_DH);AVANCE=Math.round(DH_TRANS/CONFIG.TOTAL_DH*1000)/10;
     let display=fecha;const mx=fecha.match(/^(\d{1,2})[\/\-](\d{1,2})/);if(mx)display=mx[1].padStart(2,'0')+'/'+mx[2].padStart(2,'0');
